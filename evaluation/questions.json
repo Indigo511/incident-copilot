@@ -1,0 +1,27 @@
+[
+  {
+    "question": "Why are asset-card unlocks failing after the latest release?",
+    "expected_document": "INC-104-card-unlock-v2-4",
+    "expected_section": "Root cause"
+  },
+  {
+    "question": "How was the v2.4 unlock incident resolved?",
+    "expected_document": "INC-104-card-unlock-v2-4",
+    "expected_section": "Resolution"
+  },
+  {
+    "question": "How should we initially investigate elevated unlock failures?",
+    "expected_document": "card_unlock_failures",
+    "expected_section": "Initial triage"
+  },
+  {
+    "question": "Which unlock errors are caused by users?",
+    "expected_document": "card_unlock_failures",
+    "expected_section": "User-induced failures"
+  },
+  {
+    "question": "How can recurrence of the request schema bug be prevented?",
+    "expected_document": "INC-104-card-unlock-v2-4",
+    "expected_section": "Prevention"
+  }
+]
