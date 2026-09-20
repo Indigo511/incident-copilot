@@ -23,7 +23,7 @@ def build_copilot(use_semantic_model: bool = False, use_llm: bool = False) -> In
     generator = OpenAIReportGenerator() if use_llm else DeterministicReportGenerator()
     return IncidentCopilot(
         root / "knowledge",
-        root / "data" / "live_incident.json",
+        root / "data" / "scenarios",
         embeddings,
         generator,
     )
@@ -38,9 +38,16 @@ def main() -> None:
     )
     parser.add_argument("--semantic-model", action="store_true", help="Use all-MiniLM-L6-v2")
     parser.add_argument("--llm", action="store_true", help="Use OpenAI for grounded generation")
+    parser.add_argument(
+        "--scenario",
+        default="deployment_regression",
+        help="Synthetic evidence scenario to run",
+    )
     args = parser.parse_args()
 
-    investigation = build_copilot(args.semantic_model, args.llm).investigate(args.question)
+    investigation = build_copilot(args.semantic_model, args.llm).investigate(
+        args.question, scenario=args.scenario
+    )
     output = {
         "data_mode": investigation.data_mode,
         "limitations": investigation.limitations,

@@ -1,0 +1,10 @@
+{
+  "context": {"scenario_id": "insufficient_sample", "service": "card-unlock-service", "current_version": "v2.8", "baseline_version": "v2.7", "time_range": "2026-09-20T19:00:00Z/2026-09-20T19:02:00Z"},
+  "deployments": [{"service": "card-unlock-service", "version": "v2.8", "deployed_at": "2026-09-20T19:00:00Z", "region": "ap-south-1"}],
+  "version_comparison": {"card-unlock-service": {
+    "v2.7": {"request_count": 8000, "system_induced_rate": 0.004, "user_induced_rate": 0.018},
+    "v2.8": {"request_count": 40, "system_induced_rate": 0.15, "user_induced_rate": 0.025}
+  }},
+  "log_summary": [{"service": "card-unlock-service", "version": "v2.8", "error_code": "MALFORMED_VEHICLE_ID", "error_category": "system_induced", "count": 6, "safe_sample": "pii_redacted=true"}],
+  "dependency_health": {"card-unlock-service": [{"dependency": "verification-service", "status": "healthy", "error_rate": 0.003}]}
+}

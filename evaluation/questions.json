@@ -23,5 +23,35 @@
     "question": "How can recurrence of the request schema bug be prevented?",
     "expected_document": "INC-104-card-unlock-v2-4",
     "expected_section": "Prevention"
+  },
+  {
+    "question": "What previously caused invalid vehicle numbers only on one mobile client?",
+    "expected_document": "INC-082-user-verification-spike",
+    "expected_section": "Root cause"
+  },
+  {
+    "question": "What caused card unlock timeouts when the verification service was degraded?",
+    "expected_document": "INC-091-verification-timeouts",
+    "expected_section": "Root cause"
+  },
+  {
+    "question": "Why can a failure dashboard spike while logs and customers remain normal?",
+    "expected_document": "INC-110-metrics-log-conflict",
+    "expected_section": "Root cause"
+  },
+  {
+    "question": "How should we handle attribution when multiple deployments occurred?",
+    "expected_document": "post_deployment_health",
+    "expected_section": "Ambiguous changes"
+  },
+  {
+    "question": "How do we confirm that a downstream verification dependency is failing?",
+    "expected_document": "dependency_degradation",
+    "expected_section": "Confirmation"
+  },
+  {
+    "question": "When can we call a card-unlock deployment healthy?",
+    "expected_document": "post_deployment_health",
+    "expected_section": "Healthy result"
   }
 ]

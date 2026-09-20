@@ -34,7 +34,7 @@ class ReportGenerator(Protocol):
 
 def validate_report(report: InvestigationReport, allowed_sources: set[str]) -> None:
     """Validate shape and citation membership, not semantic faithfulness."""
-    if report.status not in {"hypothesis", "insufficient_evidence"}:
+    if report.status not in {"healthy", "hypothesis", "insufficient_evidence"}:
         raise ValueError("invalid report status")
     if report.confidence not in {"low", "medium", "high"}:
         raise ValueError("invalid report confidence")
@@ -48,8 +48,8 @@ def validate_report(report: InvestigationReport, allowed_sources: set[str]) -> N
             raise ValueError(f"{name} must be a list of nonempty strings")
     if not set(report.supporting_evidence).issubset(allowed_sources):
         raise ValueError("report cites evidence that was not supplied")
-    if report.status == "hypothesis" and not report.supporting_evidence:
-        raise ValueError("hypothesis requires supporting evidence")
+    if report.status != "insufficient_evidence" and not report.supporting_evidence:
+        raise ValueError("a finding requires supporting evidence")
 
 
 def valid_rates(value: dict) -> bool:
@@ -71,33 +71,108 @@ class DeterministicReportGenerator:
         retrieved: Sequence[SearchResult],
         live_evidence: Sequence[ToolEvidence],
     ) -> InvestigationReport:
-        del question
+        del question, retrieved
         evidence_by_id = {item.evidence_id: item for item in live_evidence}
+        context_evidence = evidence_by_id.get("LIVE-CONTEXT")
         comparison = evidence_by_id.get("LIVE-VERSION-COMPARISON")
         logs = evidence_by_id.get("LIVE-LOGS")
         deployments = evidence_by_id.get("LIVE-DEPLOYMENTS")
+        dependencies = evidence_by_id.get("LIVE-DEPENDENCIES")
 
+        context = context_evidence.data if context_evidence else {}
         versions = comparison.data if comparison else {}
         releases = deployments.data.get("deployments", []) if deployments else []
-        # Multiple deployments or baselines require explicit cohort selection.
-        new_version = releases[0].get("version") if len(releases) == 1 else None
-        baselines = [version for version in versions if version != new_version]
-        old_version = baselines[0] if len(baselines) == 1 else None
+        new_version = context.get("current_version")
+        old_version = context.get("baseline_version")
         new = versions.get(new_version, {})
         old = versions.get(old_version, {})
         comparable = valid_rates(new) and valid_rates(old)
-        matching_logs = [item for item in (logs.data.get("results", []) if logs else [])
-                         if item.get("version") == new_version and item.get("count", 0) > 0]
+        current_logs = [
+            item for item in (logs.data.get("results", []) if logs else [])
+            if item.get("version") == new_version and type(item.get("count")) is int
+            and item["count"] > 0
+        ]
+        unhealthy_dependencies = [
+            item for item in (dependencies.data.get("dependencies", []) if dependencies else [])
+            if item.get("status") not in {"healthy", "unknown"}
+        ]
+        exact_release = [item for item in releases if item.get("version") == new_version]
 
-        if comparable and matching_logs and new["system_induced_rate"] >= max(0.05, old["system_induced_rate"] * 3):
-            source_ids = ["LIVE-DEPLOYMENTS", "LIVE-VERSION-COMPARISON", "LIVE-LOGS"]
+        common_sources = ["LIVE-CONTEXT", "LIVE-VERSION-COMPARISON"]
+        if not context or not comparable:
+            return self._insufficient(
+                live_evidence,
+                "The version cohorts or sample sizes are not sufficient for a safe comparison.",
+                ["Valid current and baseline cohorts with at least 100 requests each"],
+            )
+
+        new_system = new["system_induced_rate"]
+        old_system = old["system_induced_rate"]
+        new_user = new["user_induced_rate"]
+        old_user = old["user_induced_rate"]
+        system_spike = new_system >= max(0.05, old_system * 3)
+        user_spike = new_user >= max(0.05, old_user * 3)
+        total_failure_rate = new_system + new_user
+
+        if total_failure_rate < 0.05 and not unhealthy_dependencies:
+            return InvestigationReport(
+                status="healthy",
+                likely_cause="No material card-unlock health regression is visible in the supplied window.",
+                confidence="medium",
+                reasoning=(
+                    f"{new_version} has {new_system:.1%} system-induced and {new_user:.1%} "
+                    "user-induced failures, with no unhealthy dependency in the fixture."
+                ),
+                supporting_evidence=common_sources + ["LIVE-DEPENDENCIES"],
+                missing_evidence=["Longer observation window and production alert thresholds"],
+                recommended_next_steps=["Continue monitoring the deployment and compare equivalent cohorts."],
+            )
+
+        timeout_logs = [item for item in current_logs if item.get("error_code") == "VERIFICATION_SERVICE_TIMEOUT"]
+        if system_spike and timeout_logs and unhealthy_dependencies:
+            dependency_names = ", ".join(item["dependency"] for item in unhealthy_dependencies)
+            return InvestigationReport(
+                status="hypothesis",
+                likely_cause=f"Downstream degradation involving {dependency_names} is the leading hypothesis.",
+                confidence="medium",
+                reasoning=(
+                    f"System-induced failures increased from {old_system:.1%} to {new_system:.1%}; "
+                    "current timeout logs and unhealthy dependency evidence point to a downstream problem."
+                ),
+                supporting_evidence=common_sources + ["LIVE-LOGS", "LIVE-DEPENDENCIES"],
+                missing_evidence=["Distributed traces confirming the failing dependency hop"],
+                recommended_next_steps=[
+                    "Inspect downstream latency and timeout traces.",
+                    "Apply the dependency-degradation runbook; do not blame a deployment without version evidence.",
+                ],
+            )
+
+        if user_spike and not system_spike and current_logs:
+            return InvestigationReport(
+                status="hypothesis",
+                likely_cause="A user-input or validation-path change is the leading hypothesis.",
+                confidence="medium",
+                reasoning=(
+                    f"User-induced failures increased from {old_user:.1%} to {new_user:.1%}, while "
+                    f"system-induced failures remain {new_system:.1%}. Current logs contain user-error signatures."
+                ),
+                supporting_evidence=common_sources + ["LIVE-LOGS"],
+                missing_evidence=["Client version, validation-rule and user-journey breakdowns"],
+                recommended_next_steps=[
+                    "Compare failures by client version and validation rule.",
+                    "Review recent UX or validation changes before treating this as a backend outage.",
+                ],
+            )
+
+        if system_spike and current_logs and len(exact_release) == 1 and len(releases) == 1:
+            source_ids = common_sources + ["LIVE-DEPLOYMENTS", "LIVE-LOGS"]
             return InvestigationReport(
                 status="hypothesis",
                 likely_cause=f"Possible system regression associated with {new_version}; exact cause unconfirmed.",
                 confidence="medium",
                 reasoning=(
-                    f"System-induced failures are {new['system_induced_rate']:.1%} on {new_version} "
-                    f"versus {old['system_induced_rate']:.1%} on {old_version}. "
+                    f"System-induced failures are {new_system:.1%} on {new_version} "
+                    f"versus {old_system:.1%} on {old_version}. "
                     "Error logs also exist for the deployed version. These aggregates do not establish "
                     "equivalent traffic, when the spike began, or a specific mapper defect."
                 ),
@@ -111,13 +186,32 @@ class DeterministicReportGenerator:
                 ],
             )
 
+        reasons = []
+        if len(releases) > 1:
+            reasons.append("Multiple recent deployments make attribution ambiguous")
+        if system_spike and not current_logs:
+            reasons.append("Metrics show a spike but current-version logs do not corroborate it")
+        if not reasons:
+            reasons.append("The supplied signals do not form a consistent diagnostic pattern")
+        return self._insufficient(
+            live_evidence,
+            "; ".join(reasons) + ".",
+            ["Time-aligned metrics, matching logs and an unambiguous change window"],
+        )
+
+    @staticmethod
+    def _insufficient(
+        live_evidence: Sequence[ToolEvidence],
+        reasoning: str,
+        missing: list[str],
+    ) -> InvestigationReport:
         return InvestigationReport(
             status="insufficient_evidence",
             likely_cause="Unknown",
             confidence="low",
-            reasoning="The available live evidence does not distinguish a current system defect from other causes.",
+            reasoning=reasoning,
             supporting_evidence=[item.evidence_id for item in live_evidence],
-            missing_evidence=["Comparable per-version failure rates", "Matching current error signatures"],
+            missing_evidence=missing,
             recommended_next_steps=["Collect deployment, version-comparison, and redacted log evidence."],
         )
 

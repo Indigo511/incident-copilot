@@ -44,6 +44,7 @@ class IncidentCopilot:
         question: str,
         service: str = "card-unlock-service",
         retrieval_limit: int = 5,
+        scenario: str | None = None,
     ) -> Investigation:
         if not isinstance(question, str) or not 5 <= len(question.strip()) <= 1000:
             raise ValueError("question must contain between 5 and 1000 non-padding characters")
@@ -53,8 +54,15 @@ class IncidentCopilot:
             raise ValueError("retrieval_limit must be between 1 and 20")
         question = question.strip()
         retrieved = self.retriever.search(question, limit=retrieval_limit)
-        live_evidence = self.tools.investigate_unlock_failures(service)
+        selected_scenario = scenario or self.tools.default_scenario
+        live_evidence = self.tools.investigate_unlock_failures(service, selected_scenario)
         report = self.report_generator.generate(question, retrieved, live_evidence)
         validate_report(report, {item.chunk.chunk_id for item in retrieved} |
                         {item.evidence_id for item in live_evidence})
-        return Investigation(question, retrieved, live_evidence, report)
+        return Investigation(
+            question,
+            retrieved,
+            live_evidence,
+            report,
+            data_mode=f"synthetic_fixture:{selected_scenario}",
+        )

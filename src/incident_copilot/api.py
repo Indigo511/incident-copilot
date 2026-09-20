@@ -15,6 +15,7 @@ from incident_copilot.copilot import IncidentCopilot
 class InvestigationRequest(BaseModel):
     question: str = Field(min_length=5, max_length=1000)
     service: str = Field(default="card-unlock-service", min_length=1, max_length=100)
+    scenario: str = Field(default="deployment_regression", min_length=1, max_length=100)
 
 
 @lru_cache
@@ -22,7 +23,7 @@ def get_copilot() -> IncidentCopilot:
     return build_copilot()
 
 
-app = FastAPI(title="AI Incident Investigation Copilot", version="0.2.0")
+app = FastAPI(title="AI Incident Investigation Copilot", version="0.3.0")
 
 
 @app.get("/health")
@@ -33,7 +34,9 @@ def health() -> dict[str, str]:
 @app.post("/v1/investigations")
 def investigate(request: InvestigationRequest) -> dict[str, object]:
     try:
-        result = get_copilot().investigate(request.question, request.service)
+        result = get_copilot().investigate(
+            request.question, request.service, scenario=request.scenario
+        )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {

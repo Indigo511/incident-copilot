@@ -1,0 +1,10 @@
+{
+  "context": {"scenario_id": "conflicting_evidence", "service": "card-unlock-service", "current_version": "v2.9", "baseline_version": "v2.8", "time_range": "2026-09-20T20:00:00Z/2026-09-20T21:00:00Z"},
+  "deployments": [{"service": "card-unlock-service", "version": "v2.9", "deployed_at": "2026-09-20T20:02:00Z", "region": "ap-south-1"}],
+  "version_comparison": {"card-unlock-service": {
+    "v2.8": {"request_count": 10000, "system_induced_rate": 0.003, "user_induced_rate": 0.018},
+    "v2.9": {"request_count": 10000, "system_induced_rate": 0.12, "user_induced_rate": 0.02}
+  }},
+  "log_summary": [],
+  "dependency_health": {"card-unlock-service": [{"dependency": "verification-service", "status": "healthy", "error_rate": 0.003}]}
+}

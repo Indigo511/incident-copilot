@@ -7,7 +7,7 @@ from incident_copilot.copilot import IncidentCopilot
 class TestIncidentCopilot(unittest.TestCase):
     def test_e2e_investigation_returns_grounded_hypothesis(self) -> None:
         copilot = IncidentCopilot(
-            Path("knowledge"), Path("data/live_incident.json")
+            Path("knowledge"), Path("data/scenarios")
         )
         result = copilot.investigate(
             "Why are asset-card unlocks failing after the latest release?"

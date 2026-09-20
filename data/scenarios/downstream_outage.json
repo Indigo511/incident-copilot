@@ -1,0 +1,10 @@
+{
+  "context": {"scenario_id": "downstream_outage", "service": "card-unlock-service", "current_version": "v2.7", "baseline_version": "v2.6", "time_range": "2026-09-20T16:00:00Z/2026-09-20T17:00:00Z"},
+  "deployments": [],
+  "version_comparison": {"card-unlock-service": {
+    "v2.6": {"request_count": 9000, "system_induced_rate": 0.004, "user_induced_rate": 0.019},
+    "v2.7": {"request_count": 9200, "system_induced_rate": 0.11, "user_induced_rate": 0.02}
+  }},
+  "log_summary": [{"service": "card-unlock-service", "version": "v2.7", "error_code": "VERIFICATION_SERVICE_TIMEOUT", "error_category": "system_induced", "count": 1012, "safe_sample": "timeout_ms=1500, pii_redacted=true"}],
+  "dependency_health": {"card-unlock-service": [{"dependency": "verification-service", "status": "degraded", "error_rate": 0.108}]}
+}

@@ -29,6 +29,17 @@ From the repository root:
 PYTHONPATH=src python3 -m incident_copilot.cli
 ```
 
+Run a particular synthetic edge case:
+
+```bash
+PYTHONPATH=src python3 -m incident_copilot.cli \
+  "Check card-unlock health" --scenario downstream_outage
+```
+
+Available scenarios are `deployment_regression`, `healthy_deployment`,
+`user_input_spike`, `downstream_outage`, `no_recent_deployment`,
+`insufficient_sample`, `conflicting_evidence`, and `multiple_deployments`.
+
 Ask a different question:
 
 ```bash
@@ -79,7 +90,7 @@ PYTHONPATH=src python3 -m incident_copilot.evaluate
 ```
 
 The evaluation reports Recall@5: whether an expected source section appears in the top five retrieved chunks.
-These five questions were used to tune the baseline, so 5/5 is a regression check,
+These questions were used to tune the baseline, so the score is a regression check,
 not a held-out benchmark or a production accuracy estimate.
 
 Install `pip install -e '.[test-api]'` to include HTTP integration tests. Without
@@ -106,6 +117,12 @@ production authentication remain future work. The default generator is a rule-ba
 regression detector, not a general question-answering model; use the optional LLM
 adapter for free-form synthesis. Never expose the unauthenticated demo API publicly.
 
+The scenario suite covers healthy operation, deployment regression, user-induced
+failures, downstream degradation, no recent deployment, inadequate sample size,
+conflicting metrics/logs and ambiguous multiple deployments. Historical knowledge
+also includes matching and misleading prior incidents so retrieval can be tested
+against more than one root cause.
+
 ## Important design rules
 
 - The backend assigns `system_induced` versus `user_induced`; the LLM does not invent this classification.
@@ -119,7 +136,7 @@ adapter for free-form synthesis. Never expose the unauthenticated demo API publi
 
 ```text
 knowledge/                 Runbooks and historical incidents
-data/                      Synthetic current incident evidence
+data/scenarios/            Eight synthetic live-evidence scenarios
 evaluation/                Retrieval test questions
 src/incident_copilot/
   chunking.py              Meaningful Markdown section chunking

@@ -16,10 +16,18 @@ class ApiTests(unittest.TestCase):
     def test_investigation_discloses_synthetic_data(self):
         response = self.client.post("/v1/investigations", json={"question": "Check card unlock health today"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["data_mode"], "synthetic_fixture")
+        self.assertEqual(response.json()["data_mode"], "synthetic_fixture:deployment_regression")
         self.assertEqual(response.json()["report"]["status"], "hypothesis")
 
     def test_bad_requests(self):
         for body in ({"question": "     "}, {"question": "Check health", "service": "payments"}, {}):
             with self.subTest(body=body):
                 self.assertEqual(self.client.post("/v1/investigations", json=body).status_code, 422)
+
+    def test_scenario_can_be_selected(self):
+        response = self.client.post(
+            "/v1/investigations",
+            json={"question": "Check card unlock health", "scenario": "healthy_deployment"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["report"]["status"], "healthy")

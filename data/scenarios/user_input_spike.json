@@ -1,0 +1,10 @@
+{
+  "context": {"scenario_id": "user_input_spike", "service": "card-unlock-service", "current_version": "v2.6", "baseline_version": "v2.5", "time_range": "2026-09-20T14:00:00Z/2026-09-20T15:00:00Z"},
+  "deployments": [{"service": "card-unlock-service", "version": "v2.6", "deployed_at": "2026-09-20T13:55:00Z", "region": "ap-south-1"}],
+  "version_comparison": {"card-unlock-service": {
+    "v2.5": {"request_count": 10000, "system_induced_rate": 0.003, "user_induced_rate": 0.02},
+    "v2.6": {"request_count": 10000, "system_induced_rate": 0.004, "user_induced_rate": 0.12}
+  }},
+  "log_summary": [{"service": "card-unlock-service", "version": "v2.6", "error_code": "INVALID_VEHICLE_NUMBER", "error_category": "user_induced", "count": 1200, "safe_sample": "format_valid=false, pii_redacted=true"}],
+  "dependency_health": {"card-unlock-service": [{"dependency": "verification-service", "status": "healthy", "error_rate": 0.003}]}
+}
