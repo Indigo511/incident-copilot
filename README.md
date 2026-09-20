@@ -54,7 +54,9 @@ python3 -m pip install -e '.[llm]'
 incident-copilot --semantic-model --llm
 ```
 
-The backend rejects citations that were not present in retrieved knowledge or live tool output.
+Both generators are subject to output-shape and citation-membership validation.
+This does not verify that each cited source actually supports its associated claim.
+The external LLM adapter has a 30-second request timeout and two retries.
 
 ## HTTP API
 
@@ -77,6 +79,32 @@ PYTHONPATH=src python3 -m incident_copilot.evaluate
 ```
 
 The evaluation reports Recall@5: whether an expected source section appears in the top five retrieved chunks.
+These five questions were used to tune the baseline, so 5/5 is a regression check,
+not a held-out benchmark or a production accuracy estimate.
+
+Install `pip install -e '.[test-api]'` to include HTTP integration tests. Without
+these optional dependencies the HTTP tests are explicitly skipped. LLM validation
+tests use a mocked client; no external inference is performed during the test suite.
+
+## Review improvements and current boundaries
+
+- Removed the hard-coded v2.4 mapper diagnosis. Reports identify a possible release
+  regression and explicitly request timing, cohort and trace evidence.
+- Missing baselines, invalid rates, fewer than 100 requests per version, ambiguous
+  deployments, or logs only from an old version result in abstention. The minimum
+  sample count is a demo heuristic, not a statistical significance test.
+- Release names are taken from evidence; logs are no longer filtered to one preset error.
+- Blank/oversized questions and unsupported services are rejected.
+- CLI and API responses explicitly label evidence as synthetic and disclose limitations.
+- Cosine similarity now supports unnormalized vectors and rejects nonfinite values.
+- Provider vector counts and dimensions are checked before indexing.
+
+This is still a single-service demo: the tool order is fixed, `today` is not parsed,
+and the fixture is not refreshed. Healthy-state verification, dynamic tool calling,
+service-aware retrieval, persistent indexes, bounded chunking/context budgets and
+production authentication remain future work. The default generator is a rule-based
+regression detector, not a general question-answering model; use the optional LLM
+adapter for free-form synthesis. Never expose the unauthenticated demo API publicly.
 
 ## Important design rules
 

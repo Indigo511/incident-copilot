@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 try:
-    from fastapi import FastAPI
+    from fastapi import FastAPI, HTTPException
     from pydantic import BaseModel, Field
 except ImportError as error:  # pragma: no cover - optional adapter
     raise RuntimeError("Install API dependencies with: pip install -e '.[api]'") from error
@@ -32,8 +32,13 @@ def health() -> dict[str, str]:
 
 @app.post("/v1/investigations")
 def investigate(request: InvestigationRequest) -> dict[str, object]:
-    result = get_copilot().investigate(request.question, request.service)
+    try:
+        result = get_copilot().investigate(request.question, request.service)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     return {
+        "data_mode": result.data_mode,
+        "limitations": result.limitations,
         "question": result.question,
         "retrieved_sources": [item.chunk.chunk_id for item in result.retrieved],
         "live_sources": [item.evidence_id for item in result.live_evidence],

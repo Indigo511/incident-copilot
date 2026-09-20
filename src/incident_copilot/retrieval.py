@@ -33,6 +33,13 @@ class InMemoryHybridRetriever:
         self.embedding_provider = embedding_provider
         self.semantic_weight = semantic_weight
         self._vectors = embedding_provider.embed([chunk.content for chunk in self.chunks])
+        if len(self._vectors) != len(self.chunks):
+            raise ValueError("embedding provider returned the wrong number of vectors")
+        dimensions = {len(vector) for vector in self._vectors}
+        if len(dimensions) != 1 or 0 in dimensions:
+            raise ValueError("embeddings must have consistent nonzero dimensions")
+        for vector in self._vectors:
+            cosine_similarity(vector, vector)
 
     def search(
         self,
@@ -40,7 +47,7 @@ class InMemoryHybridRetriever:
         limit: int = 5,
         document_id: str | None = None,
     ) -> list[SearchResult]:
-        if limit <= 0:
+        if limit <= 0 or not query.strip():
             return []
         query_vector = self.embedding_provider.embed([query])[0]
         query_tokens = set(tokenize(query))

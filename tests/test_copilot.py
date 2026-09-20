@@ -13,7 +13,7 @@ class TestIncidentCopilot(unittest.TestCase):
             "Why are asset-card unlocks failing after the latest release?"
         )
         self.assertEqual(result.report.status, "hypothesis")
-        self.assertEqual(result.report.confidence, "high")
+        self.assertEqual(result.report.confidence, "medium")
         self.assertIn("LIVE-LOGS", result.report.supporting_evidence)
         allowed = {item.chunk.chunk_id for item in result.retrieved} | {
             item.evidence_id for item in result.live_evidence

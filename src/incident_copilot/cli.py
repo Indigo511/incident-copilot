@@ -42,6 +42,8 @@ def main() -> None:
 
     investigation = build_copilot(args.semantic_model, args.llm).investigate(args.question)
     output = {
+        "data_mode": investigation.data_mode,
+        "limitations": investigation.limitations,
         "question": investigation.question,
         "retrieved_chunks": [
             {

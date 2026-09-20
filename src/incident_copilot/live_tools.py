@@ -57,5 +57,5 @@ class FixtureIncidentTools:
         return [
             self.get_recent_deployments(service),
             self.compare_versions(service),
-            self.search_logs(service, "MALFORMED_VEHICLE_ID"),
+            self.search_logs(service),
         ]

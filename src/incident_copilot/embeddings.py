@@ -81,4 +81,9 @@ class SentenceTransformerEmbeddingProvider:
 def cosine_similarity(left: Sequence[float], right: Sequence[float]) -> float:
     if len(left) != len(right):
         raise ValueError("vectors must have equal dimensions")
-    return sum(a * b for a, b in zip(left, right))
+    if not all(math.isfinite(value) for value in (*left, *right)):
+        raise ValueError("vectors must contain finite numbers")
+    denominator = math.hypot(*left) * math.hypot(*right)
+    if not denominator:
+        return 0.0
+    return max(-1.0, min(1.0, sum(a * b for a, b in zip(left, right)) / denominator))
