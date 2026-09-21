@@ -52,6 +52,16 @@ def main() -> None:
         "data_mode": investigation.data_mode,
         "limitations": investigation.limitations,
         "question": investigation.question,
+        "plan": {
+            "intent": investigation.plan.intent,
+            "time_range": {
+                "start": investigation.plan.time_range.start,
+                "end": investigation.plan.time_range.end,
+                "source": investigation.plan.time_range.source,
+            },
+            "initial_tools": [call.name for call in investigation.plan.initial_tool_calls],
+            "blocked_actions": investigation.plan.blocked_actions,
+        },
         "retrieved_chunks": [
             {
                 "source": result.chunk.chunk_id,
@@ -65,6 +75,7 @@ def main() -> None:
             for item in investigation.live_evidence
         ],
         "report": investigation.report.to_dict(),
+        "trace": investigation.trace.to_dict(),
     }
     print(json.dumps(output, indent=2))
 

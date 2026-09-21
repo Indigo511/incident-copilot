@@ -31,3 +31,21 @@ class ApiTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["report"]["status"], "healthy")
+
+    def test_feedback_is_tied_to_known_trace(self):
+        investigation = self.client.post(
+            "/v1/investigations", json={"question": "Check card unlock health"}
+        ).json()
+        response = self.client.post(
+            "/v1/feedback",
+            json={"trace_id": investigation["trace"]["trace_id"], "rating": "helpful"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["rating"], "helpful")
+
+    def test_feedback_rejects_unknown_trace(self):
+        response = self.client.post(
+            "/v1/feedback",
+            json={"trace_id": "00000000-0000-4000-8000-000000000000", "rating": "helpful"},
+        )
+        self.assertEqual(response.status_code, 404)

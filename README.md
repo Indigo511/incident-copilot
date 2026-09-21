@@ -6,9 +6,11 @@ A production-style learning project that investigates incidents in a fictional f
 
 ```text
 Engineer question
+  -> intent and time-range planning
   -> chunked runbooks and incidents
   -> embedding + hybrid retrieval + section reranking
-  -> read-only deployment, version-comparison, and log tools
+  -> allowlisted read-only tools selected from the request
+  -> adaptive log/dependency calls when initial evidence is anomalous
   -> grounded report generator
   -> cited hypothesis, missing evidence, and safe next steps
 ```
@@ -18,6 +20,10 @@ The default mode is dependency-free and deterministic so the complete pipeline w
 - `all-MiniLM-L6-v2` for real semantic embeddings;
 - OpenAI for grounded report generation;
 - FastAPI for an HTTP interface.
+
+The current agent planner is rule-based so its decisions can be tested exactly.
+It is an architectural seam for later LLM-native tool calling; it is not presented
+as an autonomous production agent.
 
 The local hashing embedder is an educational fallback, not a trained semantic model. The deterministic generator is an auditable fallback, not an LLM.
 
@@ -87,6 +93,7 @@ curl -X POST http://127.0.0.1:8000/v1/investigations \
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 PYTHONPATH=src python3 -m incident_copilot.evaluate
+PYTHONPATH=src python3 -m incident_copilot.evaluate_agent
 ```
 
 The evaluation reports Recall@5: whether an expected source section appears in the top five retrieved chunks.
@@ -122,6 +129,32 @@ failures, downstream degradation, no recent deployment, inadequate sample size,
 conflicting metrics/logs and ambiguous multiple deployments. Historical knowledge
 also includes matching and misleading prior incidents so retrieval can be tested
 against more than one root cause.
+
+## Agent, tracing and feedback
+
+Each investigation now records:
+
+- classified intent and resolved UTC time range;
+- retrieved chunk IDs;
+- every tool call, arguments, reason and latency;
+- blocked mutation requests;
+- generator name, response status and approximate input size;
+- total local orchestration latency.
+
+The executor permits only five read-only tools and makes at most six calls. It can
+adapt after inspecting metrics: an anomaly adds logs and deployments; timeout logs
+add dependency health. Restart, rollback, traffic shifting, scaling and feature
+disablement are recorded as blocked actions and never executed.
+
+`POST /v1/feedback` accepts `helpful`/`unhelpful` feedback only for a trace generated
+by the current process. It stores optional notes and the confirmed root cause in a
+local SQLite file under `/tmp`. This is a demo feedback loop; production requires
+authentication, durable storage, retention controls and PII review.
+
+`evaluation/agent_cases.json` contains 16 cases with expected report status, required
+or forbidden tools and blocked actions. `incident-copilot-eval` reports status,
+tool-requirement and guardrail accuracy plus local latency. Token cost is not reported
+for the deterministic generator because no external model call occurs.
 
 ## Important design rules
 

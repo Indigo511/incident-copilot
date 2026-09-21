@@ -71,13 +71,29 @@ class DeterministicReportGenerator:
         retrieved: Sequence[SearchResult],
         live_evidence: Sequence[ToolEvidence],
     ) -> InvestigationReport:
-        del question, retrieved
+        del question
         evidence_by_id = {item.evidence_id: item for item in live_evidence}
         context_evidence = evidence_by_id.get("LIVE-CONTEXT")
         comparison = evidence_by_id.get("LIVE-VERSION-COMPARISON")
         logs = evidence_by_id.get("LIVE-LOGS")
         deployments = evidence_by_id.get("LIVE-DEPLOYMENTS")
         dependencies = evidence_by_id.get("LIVE-DEPENDENCIES")
+
+        if comparison is None:
+            historical_sources = [item.chunk.chunk_id for item in retrieved[:3]]
+            historical_labels = [f"{item.chunk.title} / {item.chunk.section}" for item in retrieved[:3]]
+            return InvestigationReport(
+                status="insufficient_evidence",
+                likely_cause="Historical matches found; the current root cause is not established.",
+                confidence="low",
+                reasoning=(
+                    "The strongest historical candidates are " + "; ".join(historical_labels)
+                    if historical_labels else "No relevant historical candidate was retrieved."
+                ),
+                supporting_evidence=historical_sources,
+                missing_evidence=["Current metrics, logs, deployments and dependency health"],
+                recommended_next_steps=["Collect current evidence before applying a historical resolution."],
+            )
 
         context = context_evidence.data if context_evidence else {}
         versions = comparison.data if comparison else {}
